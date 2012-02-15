@@ -1,0 +1,136 @@
+<wee> Simple Templates System
+Author: Oria Adam
+License: GPLv3
+http://softov.org/webdevtools
+
+** Function Reference
+
+   wee_process($string,$weeArray)
+     Return the $string with all the wee keys replaced, as they were found in the $weeArray
+     Read wee syntax below. 
+          
+   wee_get_keys($string) 
+     Will return all keys found in the $string.
+     Currently does not support weeLoad calls. 
+   
+   wee_val($key,$wee,$might_be_string)
+     Return a wee value for $key from $wee array
+     When $might_be_string is true, returns "$key" when $key not found in $wee.
+     Supports:
+       $wee[$key]
+       $wee->$key
+       If $key is 'foo[bar]' returns $wee[foo][wee_val('bar')] or $wee->foo[wee_val('bar')]
+       if $key has spaces, tabs or enters it will be trimmed.
+       If $key is a number, and it was not found in $wee, it will be returned.
+       If $key was not found in $wee, 
+          when $might_be_string==false empty string will be returned and a user_notice error will be logged.
+          when $might_be_string==true the key will be returned and no error will be logged.
+
+   wee_val_global($key)
+     This function exists for auto retrieving the global arrays POST GET SERVER SESSION ENV FILES and COOKIE
+     For example, weeGlobal('server[Shalom]') would return the value of $_SERVER['Shalom']
+     If the key does not exists, a value of null is returned.
+     If the key does not fit any of the arrays, FALSE is returned.  
+
+
+** The <wee> Syntax
+
+   <wee KeyName> 
+     Will be replaced with the value of $weeArray['KeyName'].
+     If KeyName was not found in $weeArray, the KeyName will be used.
+     If $weeArray['KeyName'] is an array, the item count of this array will be used.
+     * This is not recursive! To process a wee value recursively see <weeProcess>
+
+   <weeVal KeyName> TBD
+     Same as <wee KeyName> but the value will not be parsed.
+
+   <wee KeyArray[Key]> 
+     Will be replaced with the value of $weeArray['KeyArray'][$wee['Key']||'Key']
+     For example:
+      $wee=array('selected'=1,'names'=array('foo','bar'));
+      echo wee_process('<wee names[0]>',$wee); // foo
+      echo wee_process('<wee names[selected]>',$wee); // bar
+
+   <weeSample>something</weeSample> 
+     Everything inside <weeSample> tags will be removed completely.
+     This is usefull for dry data examples, for the designer's usage.
+  
+   <weeIf key1 operator key2>...</weeIf>
+        Remember that the keys are case sensitive.
+        Shalom!=shalom returns true.
+        The '>' operator is not allowed inside a <weeIf> because it looks like the end of the tag. Use {weeIf} tag or 'gt' operator.
+        The available operators are:
+            equal to       : =  e eq
+            different from : != ne d dif diff
+            greater than   : > gt
+            less than      : < lt
+            bigger/equal   : >= gte
+            smaller/equal  : <= lte
+            modulu is 0    : % mod 
+  
+  
+   <weeFor Key>...</weeFor> - 
+      Repeat a section using an inner wee array.
+      $wee['Key'] must be an array.
+      When $wee['Key'] is an array, the inside string will be repeatedly processed using wee values from the $wee['Key'] array.
+      Using inner weeFor keys:
+        <wee weeFor> and <weeIf weeFor...> tags will retrieve the current loop index (starting 0)
+        <wee weeForKey> and <weeIf weeForKey...> tags will retrieve the current index in the array
+        <wee weeForValue> and <weeIf weeForValue...> tags will retrieve the current item value
+
+   <weeFor X>...</weeFor> - 
+      Repeat a section X (or $wee[X]) times
+      $wee['X'] must be a number, unless X is a number.
+      Using weeFor: <wee weeFor> and <weeIf weeFor...> tags will retrieve the current loop index (starting 0)
+  
+   <weeInclude filename.ext> 
+       Include and process the content of file named 'filename.ext'.
+       
+   <weeInclude key> 
+       Include and process the content of file named $wee['key'].
+       If $wee['key'] is an array, I assume that the array contains multiple file names - so I include them all one by one.
+       
+   <weeProcess key>
+       Include and Process the value string of $wee['key'].
+       If $wee['key'] is an array, I assume that the array contains multiple strings - so I process them all one by one.
+
+   <weeNoProcess>...</weeNoProcess> TBD
+       Anything inside this section will NOT be parsed.
+
+   <weeSet key=value>
+       Experimental - add a value to the wee values array, for use later.
+       Usually only works on the same template, and not recursive.
+  
+   You can use {} instead of <>  
+   {wee}  {weeIf}  {weeFor}  {weeSample}  {weeLoad}
+   All {wee tags} will be processed AFTER all <wee tags> are done. 
+     
+**  Notes
+            * The tags are case sensitive. For example, <WeeSample> is invalid: the W should be lower cased.
+            * All {wee tags} will be processed AFTER all <wee tags> are done.
+            * The input $string syntax should be correct. Please use wee_syntax($string). 
+              For example: <weeSample> must have a corresponding </weeSample>
+            * You cannot use <weeIf> inside <weeIf> nor <weeFor> inside <weeFor>.
+              To workaround it use both <> and {} tags.
+              For example: 
+                <weeIf bases gt 0>
+                  {weeIf male=false}female{/weeIf}
+                  {weeIf male!=false}male{/weeIf}
+                </weeIf>
+              Another workaround - use external files.
+              For example:
+                <weeIf bases gt 0>
+                  <weeInclude templates/malefemale.htm>
+                </weeIf>
+              
+            * Tags are processed by order of appearance.
+            * Magic globals (like <wee get['bla']>) are not included for security reasons.  
+  
+** Defined Options
+
+define('WEE_DEBUG_MODE',false); 
+define('WEE_SHOW_ERRORS',false);
+define('E_USER_DEBUG',-1);
+define('WEE_ERROR_SOURCE_LENGTH',30);
+define('WEE_ENDLESS_LOOP',88888);
+
