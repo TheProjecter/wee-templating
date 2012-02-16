@@ -135,16 +135,27 @@ http://softov.org/webdevtools
   
 */
 
-/*
+/* wee.config.php file example:
+
 define('WEE_DEBUG_MODE',false); 
 define('WEE_SHOW_ERRORS',false);
 
 define('E_USER_DEBUG',-1);
 define('WEE_ERROR_SOURCE_LENGTH',30);
-define('WEE_ENDLESS_LOOP',88888);
+define('WEE_ENDLESS_LOOP',8888); // when looping more than this, it is considered endless and die
+define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive?
 */
 
-require_once('wee.config.php');
+if (file_exists('wee.config.php')) {
+	require_once('wee.config.php');
+} else {
+	define('WEE_DEBUG_MODE',true); 
+	define('WEE_SHOW_ERRORS',true);
+	define('E_USER_DEBUG',-1);
+	define('WEE_ERROR_SOURCE_LENGTH',30);
+	define('WEE_ENDLESS_LOOP',8888); // when looping more than this, it is considered endless and die
+	define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive?
+}
 
 global $wee_endless_loop,$weeval_endless_loop;
 $wee_endless_loop=0;
