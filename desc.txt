@@ -2,6 +2,7 @@
 Author: Oria Adam
 License: GPLv3
 http://softov.org/webdevtools
+http://code.google.com/p/wee-templating
 
 ** Function Reference
 
@@ -126,11 +127,12 @@ http://softov.org/webdevtools
             * Tags are processed by order of appearance.
             * Magic globals (like <wee get['bla']>) are not included for security reasons.  
   
-** Defined Options
+** Defined Options (put in wee.config.php)
 
 define('WEE_DEBUG_MODE',false); 
 define('WEE_SHOW_ERRORS',false);
 define('E_USER_DEBUG',-1);
-define('WEE_ERROR_SOURCE_LENGTH',30);
-define('WEE_ENDLESS_LOOP',88888);
+define('WEE_ERROR_SOURCE_LENGTH',30); // when reporting an error, put this much of template code in the error message
+define('WEE_ENDLESS_LOOP',8888); // when looping more than this, it is considered endless and die
+define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive?
 
