@@ -33,9 +33,10 @@ http://code.google.com/p/wee-templating
 
    wee_val_global($key)
      This function exists for auto retrieving the global arrays POST GET SERVER SESSION ENV FILES and COOKIE
-     For example, weeGlobal('server[Shalom]') would return the value of $_SERVER['Shalom']
-     If the key does not exists, a value of null is returned.
-     If the key does not fit any of the arrays, FALSE is returned.  
+     For example, weeGlobal('SERVER[foo]') would return the value of $_SERVER['foo']
+     If the key does not exists in the array return null.
+     If the key does not fit any of the arrays return false.
+     Called from wee_val() when WEE_MAGIC_GLOBALS is true
   
 ///////////////////////////// wee Syntax ///////////////////////////
 
@@ -56,13 +57,13 @@ http://code.google.com/p/wee-templating
       echo wee_process('<wee names[0]>',$wee); // foo
       echo wee_process('<wee names[selected]>',$wee); // bar
 
-   <weeSample>something</weeSample> 
-     Everything inside <weeSample> tags will be removed completely.
+   <weeComment>something</weeComment> 
+     Everything inside <weeComment> tags will be removed completely.
      This is usefull for dry data examples, for the designer's usage.
   
    <weeIf key1 operator key2>...</weeIf>
         Remember that the keys are case sensitive.
-        Shalom!=shalom returns true.
+        Foo!=foo returns true.
         The '>' operator is not allowed inside a <weeIf> because it looks like the end of the tag. Use {weeIf} tag or 'gt' operator.
         The available operators are:
             equal to       : =  e eq
@@ -110,14 +111,14 @@ http://code.google.com/p/wee-templating
        Usually only works on the same template, and not recursive.
   
    You can use {} instead of <>  
-   {wee}  {weeIf}  {weeFor}  {weeSample}  {weeLoad}
+   {wee}  {weeIf}  {weeFor}  {weeComment}  {weeLoad}
    All {wee tags} will be processed AFTER all <wee tags> are done. 
      
    NOTES:
-            * The tags are case sensitive. For example, <WeeSample> is invalid: the W should be lower cased.
+            * The tags are case sensitive. For example, <WeeComment> is invalid: the W should be lower cased.
             * All {wee tags} will be processed AFTER all <wee tags> are done.
             * The input $string syntax should be correct. Please use wee_syntax($string). 
-              For example: <weeSample> must have a corresponding </weeSample>
+              For example: <weeComment> must have a corresponding </weeComment>
             * You cannot use <weeIf> inside <weeIf> nor <weeFor> inside <weeFor>.
               To workaround it use both <> and {} tags.
               For example: 
@@ -139,12 +140,17 @@ http://code.google.com/p/wee-templating
 /* wee.config.php file example:
 
 define('WEE_DEBUG_MODE',false); 
+// Currently not in use. Default true.
 define('WEE_SHOW_ERRORS',false);
-
-define('E_USER_DEBUG',-1);
-define('WEE_ERROR_SOURCE_LENGTH',30); // when reporting an error, put this much of template code in the error message
-define('WEE_ENDLESS_LOOP',8888); // when looping more than this, it is considered endless and die
-define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive?  note that wee tags (such as weeSample) are ALWAYS case sensitive!
+// When debug mode is true, any errors that wee might encounter will be printed to the screen. Default true.
+define('WEE_ERROR_SOURCE_LENGTH',30);
+// When wee encounters a syntax error in a template it shows an excerpt of the error location. This is the length of the excerpt. Can be 0. Default 30.
+define('WEE_ENDLESS_LOOP',8888);
+// To avoid endless loops, wee have an internal counter in any loop. When the counter reaches this number wee assumes it hangs on an endless loop and die with an error. Default 8888.
+define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive? 
+// Are the keys in $wee array case-insensitive? Default false. Note that the <tags> are ALWAYS case sensitive!
+define('WEE_MAGIC_GLOBALS',false); // false for security reasons?
+// Magic globals are wee key values from POST/GET/SERVER/ENV/FILES/SESSION/COOKIE. For example <wee GET[foo]> returns $_GET['foo']. Default true.
 */
 
 if (file_exists('wee.config.php')) {
@@ -152,12 +158,12 @@ if (file_exists('wee.config.php')) {
 }
 
 // set default settings where not defined
-if (!defined('WEE_DEBUG_MODE'         )) 	define('WEE_DEBUG_MODE',true);
-if (!defined('WEE_SHOW_ERRORS'        )) 	define('WEE_SHOW_ERRORS',true);
-if (!defined('E_USER_DEBUG'           )) 	define('E_USER_DEBUG',-1);
-if (!defined('WEE_ERROR_SOURCE_LENGTH')) 	define('WEE_ERROR_SOURCE_LENGTH',30); // when reporting an error, put this much of template code in the error message
-if (!defined('WEE_ENDLESS_LOOP'       )) 	define('WEE_ENDLESS_LOOP',8888); // when looping more than this, it is considered endless and die
-if (!defined('WEE_KEY_CI'             )) 	define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive?  note that wee tags (such as weeSample) are ALWAYS case sensitive!
+if (!defined('WEE_DEBUG_MODE'         )) 	define('WEE_DEBUG_MODE',true); // currently not in use
+if (!defined('WEE_SHOW_ERRORS'        )) 	define('WEE_SHOW_ERRORS',true); // should wee print errors?
+if (!defined('WEE_ERROR_SOURCE_LENGTH')) 	define('WEE_ERROR_SOURCE_LENGTH',30); // template source length to show in on-the-fly syntax errors
+if (!defined('WEE_ENDLESS_LOOP'       )) 	define('WEE_ENDLESS_LOOP',8888); // when the endless-loop-counter reaches this number, die
+if (!defined('WEE_KEY_CI'             )) 	define('WEE_KEY_CI',false); // are the $wee keys (placeholders) case in-sensitive? Note that this does not affect the <tags>, wee tags are ALWAYS case sensitive.
+if (!defined('WEE_MAGIC_GLOBALS'      )) 	define('WEE_MAGIC_GLOBALS',true); // allow keys from automagic arrays? such as <wee GET[foo]> keys supported: POST/GET/SERVER/ENV/FILES/SESSION/COOKIE
 
 global $wee_endless_loop,$weeval_endless_loop;
 $wee_endless_loop=0;
@@ -168,7 +174,8 @@ $weeval_endless_loop=0;
 // all tags are case sensitive
 $wee_tags=array(
   array('tag'=>'weeNoProcess','closing'=>true , 'key'=>false),
-  array('tag'=>'weeSample'   ,'closing'=>true , 'key'=>false),
+  array('tag'=>'weeComment'  ,'closing'=>true , 'key'=>false),
+  array('tag'=>'weeSample'   ,'closing'=>true , 'key'=>false), // backwards compatibility - weeComment used to be called weeSample
   array('tag'=>'weeFor'      ,'closing'=>true , 'key'=>true),
   array('tag'=>'weeIf'       ,'closing'=>true , 'key'=>true),
   array('tag'=>'weeInclude'  ,'closing'=>false, 'key'=>true),
@@ -182,9 +189,8 @@ $wee_tags=array(
 
 
 function weeError($msg,$errorcode=null){
-  if (WEE_DEBUG_MODE || $errorcode!=E_USER_DEBUG) 
-    if (WEE_SHOW_ERRORS) 
-      echo htmlentities($msg);
+  if (WEE_SHOW_ERRORS)
+      print htmlentities($msg);
   if ($errorcode!==null)
     error_log($msg,$errorcode);
 }
@@ -333,21 +339,19 @@ function wee_from_array($key,$array,$arrayname='')
 
 
 // this function exists for auto retrieving the global arrays POST GET SERVER SESSION ENV FILES and COOKIE
-// for example, weeGlobal('server[ShalomHaver]') would return the value of $_SERVER['ShalomHaver']
+// for example, weeGlobal('SERVER[FooBar]') would return the value of $_SERVER['FooBar']
 // if the key does not exists, a value of null is returned.
 // if the key is not one of the arrays, a value of false is returned.
 function wee_val_global($key){
-                      $ret=wee_from_array($key,$_SERVER ,'server' );
-    if ($ret===false && !empty($_SESSION)) $ret=wee_from_array($key,$_SESSION,'session');
-    if ($ret===false) $ret=wee_from_array($key,$_GET    ,'get'    );
-    if ($ret===false) $ret=wee_from_array($key,$_POST   ,'post'   );
-    if ($ret===false) $ret=wee_from_array($key,$_FILES  ,'files'  );
-    if ($ret===false) $ret=wee_from_array($key,$_COOKIE ,'cookie' );
-    if ($ret===false) $ret=wee_from_array($key,$_ENV    ,'env'    );
-
+    if (                !empty($_SESSION)) $ret=wee_from_array($key,$_SESSION,'SESSION');
+    if ($ret===false && !empty($_COOKIE )) $ret=wee_from_array($key,$_COOKIE ,'COOKIE' );
+    if ($ret===false && !empty($_GET    )) $ret=wee_from_array($key,$_GET    ,'GET'    );
+    if ($ret===false && !empty($_POST   )) $ret=wee_from_array($key,$_POST   ,'POST'   );
+    if ($ret===false                     ) $ret=wee_from_array($key,$_SERVER ,'SERVER' );
+    if ($ret===false                     ) $ret=wee_from_array($key,$_ENV    ,'ENV'    );
+    if ($ret===false && !empty($_FILES  )) $ret=wee_from_array($key,$_FILES  ,'FILES'  );
     return $ret;
 }
-
 
 // return an array of all wee keys found in $string
 function wee_get_keys($string) {
@@ -507,12 +511,18 @@ function wee_val($key,$wee,$key_or_string=false){
 	// look for weearray[weekey][weekey2] / weearray[weekey[weekey2]]
 	if (($pos=strpos($key,'['))>1) {
 		if (($arr=wee_val_global($key))!==false) {
-			return $arr;
+			if (WEE_MAGIC_GLOBALS)
+				return $arr;
+			else {
+				weeError("wee magic globals are disabled. found: $key",E_USER_WARNING);
+				return ''; // not allowing magic globals
+			}
 		} else {
 			$arr=wee_val_array(substr($key,9,$pos),$wee);
 			return wee_val(trim(substr($key,$pos)," []\t\n\r"),wee_array_merge($arr,$wee));
 		}
 	}
+
 
 	// $key not found in $wee - try a trimmed $key
 	if ($key!=trim($key," []\r\n\t")) 
@@ -585,7 +595,12 @@ function wee_process_weeFor($string,$key,$wee)
 	return false;
 }
 
-function wee_process_weeSample($string,$key,$wee)
+function wee_process_weeComment($string,$key,$wee)
+{
+	return '';
+}
+
+function wee_process_weeSample($string,$key,$wee) // backwards compatibility - weeComment used to be called weeSample
 {
 	return '';
 }
@@ -714,7 +729,6 @@ function wee_process_weeIf($string,$key,$wee)
 				$IfResult = FALSE;
 			break;
 		}
-		//weeError("<div dir=ltr>weeIf($key)->($key1$operator$key2)->($val1$operator$val2)->".var_export($IfResult,1)."</div>",E_USER_DEBUG);
 	}
 
 	// handle weeIf result
@@ -788,10 +802,10 @@ function wee_process_se($string,$wee,$s,$e)
 		if ($t['key']) {
 			$weetags[$k]['tags']=$s.$t['tag'].' '; // '<wee '
 		} else {
-			$weetags[$k]['tags']=$s.$t['tag'].$e;  // '<weeSample>'
+			$weetags[$k]['tags']=$s.$t['tag'].$e;  // '<weeComment>'
 		}
 		if ($t['closing']) {
-			$weetags[$k]['tage']="$s/$t[tag]$e";  // '</weeSample>'
+			$weetags[$k]['tage']="$s/$t[tag]$e";  // '</weeComment>'
 		}
 		$weetags[$k]['function']="wee_process_$t[tag]";  // 'wee_process_weeIf'
 	}
@@ -922,10 +936,10 @@ results.html:
             <img src="{wee user_img}" border=0 height=36></a>
         </td>
         <td align=right>
-            <wee user_name><weeSample>My Name</weeSample>
+            <wee user_name><weeComment>My Name</weeComment>
         </td>
         <td align=center class=links>
-            <wee user_links><weeSample><a href=#>Doggy</a> <a href=#>Catty</a></weeSample>
+            <wee user_links><weeComment><a href=#>Doggy</a> <a href=#>Catty</a></weeComment>
         </td>
     </tr>
 </a>
