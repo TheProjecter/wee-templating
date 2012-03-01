@@ -141,16 +141,16 @@ http://code.google.com/p/wee-templating
 /* wee.config.php file example:
 
 define('WEE_DEBUG_MODE',false); 
-// Currently not in use. Default true.
-define('WEE_SHOW_ERRORS',false);
-// When debug mode is true, any errors that wee might encounter will be printed to the screen. Default true.
-define('WEE_ERROR_SOURCE_LENGTH',30);
+// Currently not in use. Default false.
+define('WEE_SHOW_ERRORS',false); // print errors to the screen
+// When debug mode is true, any errors that wee might encounter will be printed to the screen. Default true. Note that either way errors are reported using error_log().
+define('WEE_ERROR_SOURCE_LENGTH',70); // increase bad excerpt from template
 // When wee encounters a syntax error in a template it shows an excerpt of the error location. This is the length of the excerpt. Can be 0. Default 30.
-define('WEE_ENDLESS_LOOP',8888);
-// To avoid endless loops, wee have an internal counter in any loop. When the counter reaches this number wee assumes it hangs on an endless loop and die with an error. Default 8888.
-define('WEE_KEY_CI',false); // keys (placeholders) are case insensitive? 
-// Are the keys in $wee array case-insensitive? Default false. Note that the <tags> are ALWAYS case sensitive!
-define('WEE_MAGIC_GLOBALS',false); // false for security reasons?
+define('WEE_ENDLESS_LOOP',100000); // increase allowed number of loops
+// To avoid endless loops, wee uses a global counter that increases in all loops. When the counter reaches this number wee assumes it is stuck on an endless loop so it dies with an error. Default 8888. Increase this number if your project might repeat a block more than that.
+define('WEE_KEY_CI',true); // allow key insensitive template placeholders
+// Are the keys (placeholders) in $wee array and the template case-insensitive? Default false. Note that the <tags> are ALWAYS case sensitive!
+define('WEE_MAGIC_GLOBALS',false); // disable access to global PHP arrays from the template
 // Magic globals are wee key values from POST/GET/SERVER/ENV/FILES/SESSION/COOKIE. For example <wee GET[foo]> returns $_GET['foo']. Default true.
 */
 
@@ -159,8 +159,8 @@ if (file_exists('wee.config.php')) {
 }
 
 // set default settings where not defined
-if (!defined('WEE_DEBUG_MODE'         )) 	define('WEE_DEBUG_MODE',true); // currently not in use
-if (!defined('WEE_SHOW_ERRORS'        )) 	define('WEE_SHOW_ERRORS',true); // should wee print errors?
+if (!defined('WEE_DEBUG_MODE'         )) 	define('WEE_DEBUG_MODE',false); // currently not in use
+if (!defined('WEE_SHOW_ERRORS'        )) 	define('WEE_SHOW_ERRORS',true); // should wee print errors to screen?
 if (!defined('WEE_ERROR_SOURCE_LENGTH')) 	define('WEE_ERROR_SOURCE_LENGTH',30); // template source length to show in on-the-fly syntax errors
 if (!defined('WEE_ENDLESS_LOOP'       )) 	define('WEE_ENDLESS_LOOP',8888); // when the endless-loop-counter reaches this number, die
 if (!defined('WEE_KEY_CI'             )) 	define('WEE_KEY_CI',false); // are the $wee keys (placeholders) case in-sensitive? Note that this does not affect the <tags>, wee tags are ALWAYS case sensitive.
