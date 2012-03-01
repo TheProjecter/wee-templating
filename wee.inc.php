@@ -133,8 +133,9 @@ http://code.google.com/p/wee-templating
                 </weeIf>
               
             * Tags are processed by order of appearance.
-            * Magic globals (like <wee get['bla']>) are not included for security reasons.  
-  
+            * You can use automagic PHP globals POST/GET/SERVER/ENV/FILES/SESSION/COOKIE like that:
+              <wee SESSION[foobar]> will return $_SESSION['foobar']
+              (unless WEE_MAGIC_GLOBALS is false)
 */
 
 /* wee.config.php file example:
